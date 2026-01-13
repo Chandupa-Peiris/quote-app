@@ -42,6 +42,21 @@ export default function Home() {
     }
   }, []);
 
+
+  const addToFavorites = (quote) => {
+    fetch("http://localhost:5000/api/quotes/favorites", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "JWT " + localStorage.getItem("access_token")
+      },
+      body: JSON.stringify(quote)
+    })
+    .then(res => res.json())
+    .then(data => console.log("Added to favorites:", data))
+    .catch(err => console.error("Error adding to favorites:", err));
+  };
+
   return (
     <main style={{ padding: 20 }}>
       <h1>Daily Quote</h1>
@@ -50,7 +65,7 @@ export default function Home() {
       <QuoteCard 
         quote={quote}
         onNext={() => loadNewQuote(false)}
-        onFavorite={(quote) => saveFavorite(quote)}
+        onFavorite={addToFavorites}
         onSetDaily={(q) => setDailyQuote({ ...q, date: new Date().toISOString() })}
       />
     </main>

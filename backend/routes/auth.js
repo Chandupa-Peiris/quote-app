@@ -1,7 +1,9 @@
 
 const express = require("express");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const jwtOptions = require("../config/jwt");
 
 const router = express.Router();
 
@@ -57,4 +59,59 @@ router.post("/register", async (req, res) => {
   }
 });
 
+
+const checkUser = function (userData) {
+  return new Promise(function (resolve, reject) {
+    User.find({ userName: userData.userName })
+      .limit(1)
+      .exec()
+      .then((users) => {
+        if (users.length == 0) {
+          reject("Unable to find user " + userData.userName);
+        } else {
+          bcrypt.compare(userData.password, users[0].password).then((r) => {
+            if (r === true) {
+              resolve(users[0]);
+            } else {
+              reject("Incorrect password for user " + userData.userName);
+            }
+          });
+        }
+      })
+      .catch((err) => {
+        reject("Unable to find user " + userData.userName);
+      });
+  });
+};
+
+router.post('/login', async (req, res) => {
+  try {
+    const { userName, password } = req.body || {};
+    if (!userName || !password) {
+      return res.status(400).json({ message: 'Missing userName or password' });
+    }
+    checkUser(req.body)
+      .then((user) => {
+
+        let payload = { 
+                _id: user._id,
+                userName: user.userName,
+                
+            };
+            
+            let token = jwt.sign(payload, jwtOptions.secretOrKey, { expiresIn: '20m' });
+
+            res.json({ "message": "login successful", "token": token });
+           // res.json({ message: 'login successful', user: { _id: user._id, userName: user.userName } });
+      })
+      .catch((msg) => {
+        res.status(422).json({ message: msg });
+      });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error during login' });
+  }
+});
+
 module.exports = router;
+module.exports.checkUser = checkUser;
